@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "proprietaire": "Data Governance Leader",
+  "registre_domaines": "donnees/registre_standard_groupe.xlsx",
+  "max_allers_retours": 2,
+  "statuts": ["Identifié", "En rédaction", "À valider", "En confirmation", "À corriger", "Certifié", "Bloqué"],
+  "champs_obligatoires": {
+    "Business Object": ["definition", "classification"],
+    "Business Term": ["definition", "classification", "colonnes_liees"],
+    "KPI": ["definition", "formule", "classification"],
+    "Colonne technique": ["terme_lie", "classification"]
+  },
+  "classification": {
+    "confidentialite": ["Public", "Interne", "Confidentiel", "Restreint"],
+    "donnee_personnelle": ["Non", "Oui"],
+    "gxp": ["Non", "Oui"]
+  },
+  "regle_criticite": "Un élément est critique s'il est GxP, s'il contient une donnée personnelle, ou s'il est classé Restreint.",
+  "regle_definition": "Définition en langage métier, 1 à 3 phrases, sans jargon technique, compréhensible par une personne hors du domaine."
+}
