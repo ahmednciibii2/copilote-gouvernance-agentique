@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "proprietaire": "Data Governance Leader",
-  "registre_domaines": "donnees/registre_standard_groupe.xlsx",
+  "registre_domaines": "donnees/registre_standard_bis.xlsx",
   "max_allers_retours": 2,
   "statuts": ["Identifié", "En rédaction", "À valider", "En confirmation", "À corriger", "Certifié", "Bloqué"],
   "champs_obligatoires": {
