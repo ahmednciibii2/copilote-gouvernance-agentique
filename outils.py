@@ -11,7 +11,15 @@ from google.genai import errors
 
 load_dotenv()
 BASE = "catalogue.db"
+REGISTRE = None
 _client = None
+
+
+def utiliser(base, registre=None):
+    """Choisit la base et le registre du scénario simulé (utilisé par main.py)."""
+    global BASE, REGISTRE
+    BASE = base
+    REGISTRE = registre
 
 
 def charger_regles():
@@ -22,14 +30,15 @@ def charger_regles():
 
 def infos_domaine(domaine):
     """Renvoie le standard (groupe ou bis) et les acteurs d'un domaine."""
-    regles = charger_regles()
-    registre = pd.read_excel(regles["registre_domaines"], dtype=str).fillna("")
+    chemin = REGISTRE or charger_regles()["registre_domaines"]
+    registre = pd.read_excel(chemin, dtype=str).fillna("")
     return registre[registre["domaine"] == domaine].iloc[0].to_dict()
 
 
 def demander_gemini(consigne, essais=3):
-    """Envoie une consigne à Gemini et renvoie sa réponse (JSON) sous forme de dictionnaire.
-    Si le modèle est surchargé, attend puis réessaie ; en dernier recours, utilise le modèle de secours."""
+    """Envoie une consigne à Gemini et renvoie sa réponse JSON.
+    Gère la surcharge (503), le quota (429) et les réponses JSON mal formées ;
+    en dernier recours, utilise le modèle de secours."""
     global _client
     if _client is None:
         _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -46,8 +55,14 @@ def demander_gemini(consigne, essais=3):
                     contents=consigne,
                     config={"response_mime_type": "application/json"},
                 )
+                resultat = json.loads(reponse.text)
+                # Si Gemini emballe la liste dans un objet {"fiches": [...]}, on récupère la liste
+                if isinstance(resultat, dict) and len(resultat) == 1 and isinstance(next(iter(resultat.values())), list):
+                    resultat = next(iter(resultat.values()))
                 print(f"  (réponse fournie par {modele})")
-                return json.loads(reponse.text)
+                return resultat
+            except json.JSONDecodeError:
+                print(f"  Réponse JSON mal formée de {modele} (essai {essai}/{essais}) : nouvelle demande…")
             except errors.ServerError:
                 print(f"  {modele} surchargé (essai {essai}/{essais}) : nouvelle tentative dans 30 s…")
                 time.sleep(30)
@@ -78,10 +93,14 @@ def lire_fiches(**filtres):
 
 
 def mettre_a_jour(fiche_id, auteur, action, champs, detail=""):
-    """Modifie une fiche et trace l'action dans l'historique."""
+    """Modifie une fiche et trace l'action dans l'historique (ignore un id inconnu)."""
     maintenant = datetime.now().isoformat(timespec="seconds")
     con = connexion()
-    ancien_statut = con.execute("SELECT statut FROM fiches WHERE id = ?", (fiche_id,)).fetchone()["statut"]
+    ligne = con.execute("SELECT statut FROM fiches WHERE id = ?", (fiche_id,)).fetchone()
+    if ligne is None:
+        con.close()
+        return
+    ancien_statut = ligne["statut"]
     champs = dict(champs)
     champs["maj_le"] = maintenant
     affectations = ", ".join(f"{cle} = ?" for cle in champs)
