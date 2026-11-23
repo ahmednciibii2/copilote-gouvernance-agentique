@@ -71,14 +71,14 @@ df_technique.to_excel("donnees/metadonnees_techniques.xlsx", index=False)
 
 # ===== Registres des domaines : un par standard (acteurs fictifs) =====
 registre_groupe = pd.DataFrame([
-    {"domaine": "Finance", "standard": "groupe", "data_owner": "Claire Martin", "data_steward": "Hugo Bernard", "data_manager": ""},
-    {"domaine": "Supply Chain", "standard": "groupe", "data_owner": "Marc Dubois", "data_steward": "Inès Garcia", "data_manager": ""},
+    {"domaine": "Finance", "standard": "groupe", "data_owner": "DO-FIN", "data_steward": "DS-FIN", "data_manager": ""},
+    {"domaine": "Supply Chain", "standard": "groupe", "data_owner": "DO-SC", "data_steward": "DS-SC", "data_manager": ""},
 ])
 registre_groupe.to_excel("donnees/registre_standard_groupe.xlsx", index=False)
 
 registre_bis = pd.DataFrame([
-    {"domaine": "Finance", "standard": "bis", "data_owner": "", "data_steward": "", "data_manager": "Julien Petit"},
-    {"domaine": "Supply Chain", "standard": "bis", "data_owner": "", "data_steward": "", "data_manager": "Sarah Lefèvre"},
+    {"domaine": "Finance", "standard": "bis", "data_owner": "", "data_steward": "", "data_manager": "DM-FIN"},
+    {"domaine": "Supply Chain", "standard": "bis", "data_owner": "", "data_steward": "", "data_manager": "DM-SC"},
 ])
 registre_bis.to_excel("donnees/registre_standard_bis.xlsx", index=False)
 

@@ -1,7 +1,15 @@
 {
-  "version": "1.0",
+  "version": "2.0",
+  "standard": "bis",
+  "organisation": "Data Manager + Data Governance Leader",
   "proprietaire": "Data Governance Leader",
-  "registre_domaines": "donnees/registre_standard_bis.xlsx",
+  "circuit": {
+    "redacteur": "Data Manager",
+    "controleur": "Data Governance Leader (fiches critiques seulement)",
+    "confirmation_critique": "Data Governance Leader",
+    "decideur": "Data Manager",
+    "arbitre_blocage": "Data Governance Leader"
+  },
   "max_allers_retours": 2,
   "statuts": ["Identifié", "En rédaction", "À valider", "En confirmation", "À corriger", "Certifié", "Bloqué"],
   "champs_obligatoires": {
@@ -13,8 +21,19 @@
   "classification": {
     "confidentialite": ["Public", "Interne", "Confidentiel", "Restreint"],
     "donnee_personnelle": ["Non", "Oui"],
-    "gxp": ["Non", "Oui"]
+    "reglementee": ["Non", "Oui"]
   },
-  "regle_criticite": "Un élément est critique s'il est GxP, s'il contient une donnée personnelle, ou s'il est classé Restreint.",
+  "definition_reglementee": "Donnée soumise à une norme ou à une politique de conformité (réglementation sectorielle, politique interne).",
+  "regle_criticite": "Un élément est critique s'il contient une donnée réglementée, une donnée personnelle, ou s'il est classé Restreint.",
+  "usage_criticite": "Une fiche critique passe « En confirmation » : contrôle par l'agent Leader bis, puis confirmation du Data Governance Leader avant la décision du Data Manager. Une fiche non critique va directement au Data Manager.",
+  "grille_controle": {
+    "C1": "Champs obligatoires remplis selon le type de fiche",
+    "C2": "Définition métier : 1 à 3 phrases, sans jargon, compréhensible hors du domaine",
+    "C3": "Classification cohérente et valeurs autorisées",
+    "C4": "Chaque colonne liée appartient bien à ce Business Object",
+    "C5": "Formule du KPI précise : attributs, dates, unités",
+    "C6": "Terme sans colonne dans le SI : écart B vers A signalé, pas de refus",
+    "C7": "Criticité calculée par la règle : déclenche la confirmation"
+  },
   "regle_definition": "Définition en langage métier, 1 à 3 phrases, sans jargon technique, compréhensible par une personne hors du domaine."
 }
