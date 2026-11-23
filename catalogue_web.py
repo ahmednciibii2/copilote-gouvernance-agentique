@@ -32,6 +32,7 @@ th{background:#f1f5f9;width:200px}
 .carte{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin:12px 0}
 button{padding:6px 12px;margin:4px 8px 4px 0;cursor:pointer} textarea{width:100%;height:60px}
 .erreur{color:#b91c1c;font-weight:bold}
+.pied-page{margin-top:40px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center}
 </style>"""
 
 PAGE_ACCUEIL = """<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Mini-catalogue</title>{{ style|safe }}</head><body>
@@ -58,6 +59,7 @@ PAGE_ACCUEIL = """<!doctype html><html lang="fr"><head><meta charset="utf-8"><ti
   {% endfor %}
   </table>
 {% endif %}
+<div class="pied-page">POC gouvernance agentique — données fictives — Gemini</div>
 </body></html>"""
 
 PAGE_FICHE = """<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>{{ f.nom }}</title>{{ style|safe }}</head><body>
@@ -79,6 +81,7 @@ PAGE_FICHE = """<!doctype html><html lang="fr"><head><meta charset="utf-8"><titl
 <table><tr><th>Date</th><th>Auteur</th><th>Action</th><th>Statut avant</th><th>Statut après</th><th>Détail</th></tr>
 {% for h in historique %}<tr><td>{{ h.date }}</td><td>{{ h.auteur }}</td><td>{{ h.action }}</td><td>{{ h.ancien_statut or '' }}</td><td>{{ h.nouveau_statut or '' }}</td><td>{{ h.detail or '' }}</td></tr>{% endfor %}
 </table>
+<div class="pied-page">POC gouvernance agentique — données fictives — Gemini</div>
 </body></html>"""
 
 app = Flask(__name__)
@@ -108,7 +111,7 @@ def actions_possibles(scenario, f):
     if f["statut"] == "Bloqué":
         return [("renvoyer", "Renvoyer au rédacteur avec ma décision")]
     if scenario == "bis" and suivant.startswith("Data Governance Leader"):
-        return [("confirmer", "Confirmer l'élément critique"), ("renvoyer", "Renvoyer avec motif")]
+        return [("confirmer", "Confirm l'élément critique"), ("renvoyer", "Renvoyer avec motif")]
     return [("publier", "Publier (Certifié)"), ("renvoyer", "Renvoyer avec motif")]
 
 
