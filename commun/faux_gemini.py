@@ -11,6 +11,7 @@ def faux_gemini(consigne, essais=3):
              "terme_lie": {"TEC-01": "GLO-02", "TEC-15": "GLO-23"}.get(i, "NOUVEAU"), "nouveau_terme": f"Terme {i}", "business_object": "Lot de production",
              "confidentialite": "Restreint" if i in ("TEC-01", "TEC-15") else "Interne", "donnee_personnelle": "Non",
              "reglementee": "Oui" if i in ("GLO-02", "TEC-01") else "Non",
+             "description_technique": f"Identifiant technique de test ({i}).", "regle_qualite": "non nulle",
              "synthese": "Synthèse de test.", "recommandation": "Valider", "motif": "", "points_attention": ""}
         for p in ("C2", "C3", "C4", "C5"):
             r[p] = {"resultat": "ko" if (i == "GLO-03" and p == "C4") else "ok", "motif": "colonne d'un autre objet" if i == "GLO-03" else ""}

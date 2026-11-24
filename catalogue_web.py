@@ -11,15 +11,17 @@ from flask import Flask, abort, redirect, render_template_string, request, url_f
 import commun.outils as outils
 
 STANDARDS = {
-    "groupe": {"titre": "Standard groupe", "organisation": "Data Owner + Data Steward + Data Governance Leader",
-               "redacteur": "AG-GRP-STEWARD", "croisement_ab": "AG-GRP-CROISEMENT-AB"},
-    "bis": {"titre": "Standard bis", "organisation": "Data Manager + Data Governance Leader",
-            "redacteur": "AG-BIS-MANAGER", "croisement_ab": "AG-BIS-CROISEMENT-AB"},
+    "groupe": {"titre": "Standard groupe", "organisation": "Data Owner + Data Steward + Data Custodian + Data Governance Leader",
+               "redacteur": "AG-GRP-STEWARD", "custodian": "AG-GRP-CUSTODIAN"},
+    "bis": {"titre": "Standard bis", "organisation": "Data Manager + Data Custodian + Data Governance Leader",
+            "redacteur": "AG-BIS-MANAGER", "custodian": "AG-BIS-CUSTODIAN"},
 }
 CHAMPS = [
     ("Id", "id"), ("Domaine", "domaine"), ("Chemin", "chemin"), ("Type", "type"),
     ("Business Object", "business_object"), ("Système", "systeme"), ("Table", "table_source"),
-    ("Colonne", "colonne"), ("Exemples", "exemples"), ("Définition", "definition"), ("Formule", "formule"),
+    ("Colonne", "colonne"), ("Exemples", "exemples"), ("Lignage", "lignage"),
+    ("Description technique", "description_technique"), ("Règle qualité", "regle_qualite"),
+    ("Définition", "definition"), ("Formule", "formule"),
     ("Confidentialité", "confidentialite"), ("Donnée personnelle", "donnee_personnelle"), ("Réglementée", "reglementee"),
     ("Critique", "critique"), ("Héritage de classification", "heritage"),
     ("Terme lié (A→B)", "terme_lie"), ("Colonnes liées (B→A)", "colonnes_liees"),
@@ -214,15 +216,17 @@ def decider(std, fiche_id):
             "statut": "Certifié", "acteur_suivant": "", "motif_rejet": "",
         }, detail=motif)
     elif action == "confirmer":
-        manager = outils.infos_domaine(f["domaine"])["data_manager"]
+        acteurs = outils.infos_domaine(f["domaine"])
+        decideur = (f"Data Manager : {acteurs['data_manager']} (humain)" if f["chemin"] == "B"
+                    else f"Data Custodian : {acteurs['data_custodian']} (humain)")
         outils.mettre_a_jour(fiche_id, auteur, "Décision humaine : élément critique confirmé", {
-            "statut": "À valider", "acteur_suivant": f"Data Manager : {manager} (humain)",
+            "statut": "À valider", "acteur_suivant": decideur,
         }, detail=motif)
     elif action == "renvoyer":
         if not motif:
             return redirect(url_for("fiche", std=std, fiche_id=fiche_id, erreur=1))
-        # un terme repart au rédacteur, une colonne au croisement A→B
-        retour = s["redacteur"] if f["chemin"] == "B" else s["croisement_ab"]
+        # un terme repart au rédacteur, une colonne à l'agent Custodian
+        retour = s["redacteur"] if f["chemin"] == "B" else s["custodian"]
         outils.mettre_a_jour(fiche_id, auteur, "Décision humaine : renvoi", {
             "statut": "À corriger", "acteur_suivant": retour,
             "nb_rejets": 0, "motif_rejet": "Décision humaine : " + motif,

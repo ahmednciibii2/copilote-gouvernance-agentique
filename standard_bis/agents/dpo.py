@@ -9,7 +9,7 @@ Règle d'héritage (charte, regle_heritage) :
   et un écart d'héritage est signalé au décideur ;
 - une colonne sans terme (NOUVEAU) est classifiée directement.
 Puis tri par criticité : fiche critique → « En confirmation » chez l'agent Leader bis ;
-fiche non critique → « À valider » chez l'agent Manager, qui prépare le dossier du Data Manager.
+fiche non critique → « À valider » chez l'agent Manager (terme) ou l'agent Custodian (colonne), qui préparent le dossier.
 """
 import json
 
@@ -123,7 +123,7 @@ Réponds uniquement en JSON : une liste d'objets avec les clés id, confidential
             "critique": "Oui" if critique else "Non",
             "heritage": heritage,
             "statut": "En confirmation" if critique else "À valider",
-            "acteur_suivant": "AG-BIS-LEADER" if critique else "AG-BIS-MANAGER",
+            "acteur_suivant": "AG-BIS-LEADER" if critique else ("AG-BIS-MANAGER" if f["chemin"] == "B" else "AG-BIS-CUSTODIAN"),
             "commentaire_ia": (f["commentaire_ia"] or "") + " | " + texte + " " + p.get("justification", ""),
         }, detail=texte)
-    print(f"{AGENT} : classification terminée ({nb_critiques} critique(s), {nb_ecarts} écart(s) d'héritage) : critiques → AG-BIS-LEADER, autres → AG-BIS-MANAGER.")
+    print(f"{AGENT} : classification terminée ({nb_critiques} critique(s), {nb_ecarts} écart(s) d'héritage) : critiques → AG-BIS-LEADER, autres → AG-BIS-MANAGER (termes) / AG-BIS-CUSTODIAN (colonnes).")

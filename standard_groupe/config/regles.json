@@ -1,12 +1,12 @@
 {
-  "version": "2.2",
+  "version": "2.3",
   "standard": "groupe",
-  "organisation": "Data Owner + Data Steward + Data Governance Leader",
+  "organisation": "Data Owner + Data Steward + Data Custodian + Data Governance Leader",
   "proprietaire": "Data Governance Leader",
   "circuit": {
-    "redacteur": "Data Steward",
+    "redacteur": "Data Steward (glossaire) ; Data Custodian (colonnes techniques)",
     "controleur": "Data Governance Leader (toutes les fiches)",
-    "decideur": "Data Owner",
+    "decideur": "Data Owner (termes et KPI) ; Data Custodian (colonnes techniques)",
     "arbitre_blocage": "Data Governance Leader",
     "classification": "Agent DPO (proposition), contrôlée en C3 par le Leader, validée par le Data Owner"
   },
@@ -36,7 +36,9 @@
     ],
     "Colonne technique": [
       "terme_lie",
-      "classification"
+      "classification",
+      "description_technique",
+      "regle_qualite"
     ]
   },
   "classification": {
@@ -71,10 +73,11 @@
   "agents": {
     "AG-GRP-STEWARD": "rédige la définition et la formule (glossaire)",
     "AG-GRP-CROISEMENT-BA": "croisement B→A : terme → colonnes ; écart B→A si aucune colonne",
+    "AG-GRP-CUSTODIAN": "documentation technique des colonnes (description, lignage, règle qualité) et dossier de décision des colonnes pour le Data Custodian",
     "AG-GRP-CROISEMENT-AB": "croisement A→B : colonne → terme ; terme NOUVEAU proposé si aucun",
     "AG-GRP-DPO": "classification de toutes les métadonnées, avec héritage métier → technique",
     "AG-GRP-LEADER": "contrôle de toutes les fiches avec la grille C1 à C7",
-    "AG-GRP-OWNER": "dossier de décision pour le Data Owner"
+    "AG-GRP-OWNER": "dossier de décision des termes et KPI pour le Data Owner"
   },
   "regle_heritage": "Le terme métier porte la classification. Une colonne liée à un terme (terme_lie ou colonnes_liees) en hérite. Si la colonne paraît plus sensible que son terme, le niveau le plus strict est conservé et un écart d'héritage est signalé au décideur. Une colonne sans terme est classifiée directement.",
   "exemples_reglementee": {
@@ -91,5 +94,6 @@
       "mode de transport",
       "quantité planifiée"
     ]
-  }
+  },
+  "regle_colonne_nouveau_terme": "Une colonne rattachée à un terme NOUVEAU est décidée par le Data Custodian ; la création du terme relève du décideur métier (Data Owner en groupe, Data Manager en bis)."
 }
