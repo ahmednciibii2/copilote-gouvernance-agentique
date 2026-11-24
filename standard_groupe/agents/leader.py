@@ -3,7 +3,8 @@
 Contrôle chaque fiche « À valider » avec la grille C1 à C7 de la charte, point par point :
 - par le code : C1 (champs obligatoires), C3 (valeurs autorisées), C6 (écarts), C7 (criticité) ;
 - par Gemini : C2 (définition), C3 (cohérence), C4 (colonnes liées), C5 (formule).
-Puis : relais à l'agent Owner, retour au Steward, ou blocage au-delà de max_allers_retours.
+Puis : relais à l'agent Owner, retour au rédacteur (Steward pour un terme, croisement A→B pour une colonne),
+ou blocage au-delà de max_allers_retours.
 """
 import json
 
@@ -43,13 +44,15 @@ def controle_code(f, regles):
     hors = [nom for nom in ("confidentialite", "donnee_personnelle", "reglementee") if f[nom] and f[nom] not in cl[nom]]
     r["C3_valeurs"] = ("ko", "Valeurs hors charte : " + ", ".join(hors)) if hors else ("ok", "")
 
-    # C6 : écarts entre glossaire et SI (signalés, jamais refusés)
+    # C6 : écarts entre glossaire et SI, et écarts d'héritage de classification (signalés, jamais refusés)
+    ecarts = []
     if f["type"] in ("Business Term", "KPI") and not f["colonnes_liees"]:
-        r["C6"] = ("alerte", "Écart B→A : aucune colonne correspondante dans le SI.")
-    elif f["type"] == "Colonne technique" and (f["terme_lie"] or "").startswith("NOUVEAU"):
-        r["C6"] = ("alerte", "Écart A→B : nouveau terme métier à arbitrer.")
-    else:
-        r["C6"] = ("ok", "")
+        ecarts.append("Écart B→A : aucune colonne correspondante dans le SI.")
+    if f["type"] == "Colonne technique" and (f["terme_lie"] or "").startswith("NOUVEAU"):
+        ecarts.append("Écart A→B : nouveau terme métier à arbitrer.")
+    if "écart d'héritage" in (f.get("heritage") or ""):
+        ecarts.append("Écart d'héritage : colonne plus sensible que son terme.")
+    r["C6"] = ("alerte", " ".join(ecarts)) if ecarts else ("ok", "")
 
     # C7 : criticité (information pour le Data Owner, jamais refusée)
     r["C7"] = ("alerte", "Fiche critique (réglementée, personnelle ou Restreint).") if est_critique(f) else ("ok", "")
@@ -124,7 +127,8 @@ Chaque point est un objet {{"resultat": "ok" ou "ko" ou "na", "motif": "chaîne 
             bloque = nb > regles["max_allers_retours"]
             mettre_a_jour(f["id"], AGENT, "Contrôle grille C1-C7 : non conforme", {
                 "statut": "Bloqué" if bloque else "À corriger",
-                "acteur_suivant": "Data Governance Leader (humain)" if bloque else "AG-GRP-STEWARD",
+                "acteur_suivant": "Data Governance Leader (humain)" if bloque else
+                                  ("AG-GRP-STEWARD" if f["chemin"] == "B" else "AG-GRP-CROISEMENT-AB"),
                 "nb_rejets": nb,
                 "motif_rejet": " ; ".join(motifs),
             }, detail=ligne_grille + " — " + " ; ".join(motifs))

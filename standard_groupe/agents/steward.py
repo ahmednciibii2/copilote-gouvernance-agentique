@@ -1,6 +1,8 @@
 """AG-GRP-STEWARD — agent rédacteur du standard groupe (assiste le Data Steward).
 
-Rédige et classifie les fiches d'un Business Object, puis les transmet à l'agent Leader.
+Rédige la définition (et la formule d'un KPI) des fiches d'un Business Object du glossaire.
+Ne fait ni les liens avec les colonnes (croisement B→A), ni la classification (agent DPO).
+Circuit : Rédacteur → Croisement B→A → Agent DPO → Leader → Owner → Data Owner humain.
 """
 import json
 
@@ -8,61 +10,50 @@ from commun.outils import charger_regles, demander_gemini, infos_domaine, lire_f
 
 STANDARD = "groupe"
 AGENT = "AG-GRP-STEWARD"
+SUIVANT = "AG-GRP-CROISEMENT-BA"
 utiliser_standard(STANDARD)   # cet agent ne travaille que dans le standard groupe
 
 
 def documenter_business_object(domaine, business_object):
-    """Rédige et classifie toutes les fiches d'un Business Object (standard groupe)."""
+    """Rédige les fiches d'un Business Object (nouvelles ou à corriger), puis relais au croisement B→A."""
     acteurs = infos_domaine(domaine)   # erreur claire si le domaine n'est pas dans le registre du groupe
     regles = charger_regles()
     fiches = [
-        f for f in lire_fiches(domaine=domaine, business_object=business_object)
+        f for f in lire_fiches(domaine=domaine, business_object=business_object, chemin="B")
         if f["statut"] in ("Identifié", "À corriger")
     ]
     if not fiches:
-        print(f"{AGENT} : aucune fiche à documenter pour {business_object}.")
+        print(f"{AGENT} : aucune fiche à rédiger pour {business_object}.")
         return
 
-    elements = [{"id": f["id"], "type": f["type"], "nom": f["nom"], "motif_rejet": f["motif_rejet"] or ""} for f in fiches]
-    colonnes = [{"id": c["id"], "nom": c["nom"], "exemples": c["exemples"]} for c in lire_fiches(domaine=domaine, chemin="A")]
+    elements = [{"id": f["id"], "type": f["type"], "nom": f["nom"],
+                 "definition_precedente": f["definition"] or "", "motif_rejet": f["motif_rejet"] or ""} for f in fiches]
 
     consigne = f"""Tu es l'assistant du Data Steward ({acteurs["data_steward"]}) du domaine {domaine} dans une entreprise.
-Tu documentes le Business Object « {business_object} » du glossaire métier.
+Tu rédiges les fiches du Business Object « {business_object} » du glossaire métier.
 
 Règles de la charte du standard groupe :
-- Définition : {regles["regle_definition"]}
-- Confidentialité : une valeur parmi {regles["classification"]["confidentialite"]}
-- donnee_personnelle : "Oui" ou "Non"
-- reglementee : "Oui" si l'élément est une donnée réglementée ({regles["definition_reglementee"]}), sinon "Non"
+- definition : {regles["regle_definition"]}
 - formule : pour un KPI, une formule de calcul précise (attributs, dates, unités) ; sinon chaîne vide
-- colonnes_liees : liste des id de colonnes techniques ci-dessous qui représentent cet élément dans le SI ; liste vide si aucune
-- Si un motif_rejet est fourni, corrige ta proposition en conséquence.
+- Si un motif_rejet est fourni, corrige ta proposition (definition_precedente) en conséquence.
 
-Éléments à documenter : {json.dumps(elements, ensure_ascii=False)}
-Colonnes techniques du domaine : {json.dumps(colonnes, ensure_ascii=False)}
+Éléments à rédiger : {json.dumps(elements, ensure_ascii=False)}
 
-Réponds uniquement en JSON : une liste d'objets avec les clés
-id, definition, formule, confidentialite, donnee_personnelle, reglementee, colonnes_liees, justification."""
+Réponds uniquement en JSON : une liste d'objets avec les clés id, definition, formule, justification."""
 
-    print(f"{AGENT} : envoi de {len(fiches)} fiches à Gemini pour « {business_object} »…")
-    propositions = demander_gemini(consigne)
+    print(f"{AGENT} : rédaction de {len(fiches)} fiche(s) pour « {business_object} »…")
+    propositions = {p.get("id"): p for p in demander_gemini(consigne) if isinstance(p, dict)}
 
-    for p in propositions:
-        mettre_a_jour(
-            p["id"],
-            AGENT,
-            "Proposition de documentation",
-            {
-                "definition": p.get("definition", ""),
-                "formule": p.get("formule", ""),
-                "confidentialite": p.get("confidentialite", ""),
-                "donnee_personnelle": p.get("donnee_personnelle", ""),
-                "reglementee": p.get("reglementee", ""),
-                "colonnes_liees": ", ".join(p.get("colonnes_liees", [])),
-                "commentaire_ia": "Proposé par IA, à valider. " + p.get("justification", ""),
-                "statut": "À valider",
-                "acteur_suivant": "AG-GRP-LEADER",
-            },
-            detail=p.get("justification", ""),
-        )
-    print(f"{AGENT} : {len(propositions)} fiches passées en « À valider », relais à AG-GRP-LEADER.")
+    for f in fiches:
+        p = propositions.get(f["id"])
+        if p is None:
+            print(f"  {f['id']} : pas de réponse de Gemini, la fiche reste en attente.")
+            continue
+        mettre_a_jour(f["id"], AGENT, "Rédaction proposée", {
+            "definition": p.get("definition", ""),
+            "formule": p.get("formule", ""),
+            "commentaire_ia": "Rédaction proposée par IA. " + p.get("justification", ""),
+            "statut": "En rédaction",
+            "acteur_suivant": SUIVANT,
+        }, detail=p.get("justification", ""))
+    print(f"{AGENT} : rédaction terminée, relais à {SUIVANT}.")

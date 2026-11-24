@@ -1,75 +1,145 @@
+"""AG-BIS-LEADER — agent contrôleur des fiches critiques du standard bis (assiste le Data Governance Leader).
+
+Contrôle chaque fiche critique « En confirmation » avec la grille C1 à C7 de la charte, point par point :
+- par le code : C1 (champs obligatoires), C3 (valeurs autorisées), C6 (écarts), C7 (criticité) ;
+- par Gemini : C2 (définition), C3 (cohérence), C4 (colonnes liées), C5 (formule).
+Puis : conforme → confirmation par le Data Governance Leader humain (DPO consulté) ;
+non conforme → retour au rédacteur (Manager pour un terme, croisement A→B pour une colonne) ;
+blocage au-delà de max_allers_retours.
+"""
 import json
 
-from outils import charger_regles, demander_gemini, infos_domaine, lire_fiches, mettre_a_jour
+from commun.outils import charger_regles, demander_gemini, infos_domaine, lire_fiches, mettre_a_jour, utiliser_standard
 
+STANDARD = "bis"
 AGENT = "AG-BIS-LEADER"
+utiliser_standard(STANDARD)   # cet agent ne travaille que dans le standard bis
+
+POINTS = ["C1", "C2", "C3", "C4", "C5", "C6", "C7"]
+SYMBOLE = {"ok": "✅", "ko": "❌", "alerte": "⚠️", "na": "–"}
+
+
+def est_critique(f):
+    """C7 : règle de criticité de la charte (calculée par le code, pas par l'IA)."""
+    return f["reglementee"] == "Oui" or f["donnee_personnelle"] == "Oui" or f["confidentialite"] == "Restreint"
+
+
+def controle_code(f, regles):
+    """Contrôles sans IA : C1, valeurs de C3, C6 et C7. Renvoie {point: (resultat, motif)}."""
+    r = {}
+
+    # C1 : champs obligatoires selon le type de fiche
+    absents = []
+    for champ in regles["champs_obligatoires"].get(f["type"], []):
+        if champ == "classification":
+            if not (f["confidentialite"] and f["donnee_personnelle"] and f["reglementee"]):
+                absents.append("classification")
+        elif champ == "colonnes_liees":
+            continue   # un manque dans le SI n'est pas une faute du rédacteur : traité en C6
+        elif not f[champ]:
+            absents.append(champ)
+    r["C1"] = ("ko", "Champs obligatoires manquants : " + ", ".join(absents)) if absents else ("ok", "")
+
+    # C3 (partie code) : valeurs autorisées par la charte
+    cl = regles["classification"]
+    hors = [nom for nom in ("confidentialite", "donnee_personnelle", "reglementee") if f[nom] and f[nom] not in cl[nom]]
+    r["C3_valeurs"] = ("ko", "Valeurs hors charte : " + ", ".join(hors)) if hors else ("ok", "")
+
+    # C6 : écarts entre glossaire et SI, et écarts d'héritage de classification (signalés, jamais refusés)
+    ecarts = []
+    if f["type"] in ("Business Term", "KPI") and not f["colonnes_liees"]:
+        ecarts.append("Écart B→A : aucune colonne correspondante dans le SI.")
+    if f["type"] == "Colonne technique" and (f["terme_lie"] or "").startswith("NOUVEAU"):
+        ecarts.append("Écart A→B : nouveau terme métier à arbitrer.")
+    if "écart d'héritage" in (f.get("heritage") or ""):
+        ecarts.append("Écart d'héritage : colonne plus sensible que son terme.")
+    r["C6"] = ("alerte", " ".join(ecarts)) if ecarts else ("ok", "")
+
+    # C7 : criticité (c'est elle qui a déclenché la confirmation ; jamais refusée)
+    r["C7"] = ("alerte", "Fiche critique (réglementée, personnelle ou Restreint).") if est_critique(f) else ("ok", "")
+    return r
 
 
 def confirmer(domaine):
-    """Analyse les dossiers critiques du standard bis (glossaire et colonnes) ; la confirmation reste humaine."""
-    infos = infos_domaine(domaine)
-    if infos["standard"] != "bis":
-        print(f"{AGENT} : le domaine {domaine} n'est pas en standard bis, rien à faire.")
-        return
-
+    """Contrôle les fiches critiques (glossaire et colonnes) ; la confirmation finale reste humaine (standard bis)."""
+    infos_domaine(domaine)   # erreur claire si le domaine n'est pas dans le registre du bis
     regles = charger_regles()
+    grille = regles["grille_controle"]
     fiches = [f for f in lire_fiches(domaine=domaine, statut="En confirmation") if f["acteur_suivant"] == AGENT]
     if not fiches:
-        print(f"{AGENT} : aucun dossier critique à analyser pour {domaine}.")
+        print(f"{AGENT} : aucune fiche critique à contrôler pour {domaine}.")
         return
     par_id = {f["id"]: f for f in fiches}
 
+    # Contrôle par Gemini : C2, C3 (cohérence), C4, C5
     colonnes = {c["id"]: c["nom"] for c in lire_fiches(domaine=domaine, chemin="A")}
     termes = {t["id"]: t["nom"] for t in lire_fiches(domaine=domaine, chemin="B")}
-    dossiers = []
+    a_controler = []
     for f in fiches:
         liens = [i.strip() for i in (f["colonnes_liees"] or "").split(",") if i.strip()]
         terme = f["terme_lie"] or ""
-        dossiers.append({
+        a_controler.append({
             "id": f["id"], "type": f["type"], "nom": f["nom"], "business_object": f["business_object"],
             "exemples": f["exemples"], "definition": f["definition"], "formule": f["formule"],
-            "confidentialite": f["confidentialite"], "donnee_personnelle": f["donnee_personnelle"], "gxp": f["gxp"],
+            "confidentialite": f["confidentialite"], "donnee_personnelle": f["donnee_personnelle"], "reglementee": f["reglementee"],
             "colonnes_liees": [f"{i} = {colonnes.get(i, 'inconnue')}" for i in liens],
             "terme_lie": f"{terme} = {termes[terme]}" if terme in termes else terme,
         })
 
-    consigne = f"""Tu es l'assistant du Data Governance Leader d'un laboratoire pharmaceutique.
-Ces fiches du domaine {domaine} sont critiques (GxP, donnée personnelle ou confidentialité Restreint).
-Le domaine est en standard bis : le Data Manager rédige et valide seul, tu es le garde-fou.
-Analyse chaque dossier :
-- la classification est-elle justifiée ? GxP et confidentialité sont deux axes indépendants : une donnée GxP n'est pas forcément confidentielle ;
-  "Restreint" est réservé aux données très sensibles (coordonnées bancaires, données personnelles sensibles, secrets industriels) ;
-- terme du glossaire : définition conforme ({regles["regle_definition"]}), colonnes liées qui représentent réellement l'élément, formule cohérente pour un KPI ;
-- colonne technique : terme_lie correspond-il au sens réel de la colonne (voir ses exemples) ?
-  La forme « NOUVEAU : nom du terme (Business Object) » est la forme normale d'un nouveau terme proposé : ne la considère pas comme une erreur ;
-  vérifie seulement que le nouveau terme et sa définition sont pertinents.
-Sois exigeant mais juste.
+    consigne = f"""Tu es l'assistant du Data Governance Leader d'une entreprise (standard bis : le Data Manager rédige et valide, tu es le garde-fou).
+Ces fiches du domaine {domaine} sont critiques (donnée réglementée, personnelle ou Restreint).
+Contrôle-les avec la grille de la charte, point par point :
+- C2 : {grille["C2"]}. Règle : {regles["regle_definition"]}
+  Pour une colonne technique, la définition n'est exigée que pour un NOUVEAU terme proposé ; sinon réponds "na".
+- C3 : {grille["C3"]}. Confidentialité, donnée personnelle et donnée réglementée sont trois axes indépendants.
+  Donnée réglementée : {regles["definition_reglementee"]}
+  "Restreint" est réservé aux données très sensibles (coordonnées bancaires, données personnelles sensibles, secrets d'affaires).
+- C4 : {grille["C4"]}. Une colonne d'un autre Business Object est une erreur. "na" si aucune colonne liée.
+  Pour une colonne technique : terme_lie doit correspondre au sens réel de la colonne (voir ses exemples).
+  La forme « NOUVEAU : nom du terme (Business Object) » est normale : vérifie seulement que le terme proposé est pertinent.
+- C5 : {grille["C5"]}. "na" si l'élément n'est pas un KPI.
+Sois exigeant mais juste : "ko" seulement pour une vraie erreur.
 
-Dossiers : {json.dumps(dossiers, ensure_ascii=False)}
+Fiches : {json.dumps(a_controler, ensure_ascii=False)}
 
-Réponds uniquement en JSON : une liste d'objets avec les clés
-id, conforme (true ou false), motif (chaîne vide si conforme, sinon explication courte et actionnable), analyse (une phrase pour le Leader humain)."""
+Réponds uniquement en JSON : une liste d'objets avec les clés id, C2, C3, C4, C5.
+Chaque point est un objet {{"resultat": "ok" ou "ko" ou "na", "motif": "chaîne vide si ok ou na, sinon explication courte et actionnable pour le rédacteur"}}."""
 
-    print(f"{AGENT} : analyse de {len(fiches)} dossier(s) critique(s) du domaine {domaine}…")
-    for a in demander_gemini(consigne):
-        fiche = par_id.get(a.get("id")) if isinstance(a, dict) else None
-        if fiche is None:
-            continue
-        if a.get("conforme") is False:
-            nb = (fiche["nb_rejets"] or 0) + 1
+    print(f"{AGENT} : contrôle de {len(fiches)} fiche(s) critique(s) du domaine {domaine} (grille C1 à C7)…")
+    avis = {a.get("id"): a for a in demander_gemini(consigne) if isinstance(a, dict)}
+
+    # Fusion des résultats, puis tâche de frontière : relais à l'Owner, retour au Steward, ou blocage
+    for f in fiches:
+        r = controle_code(f, regles)
+        a = avis.get(f["id"], {})
+        for point in ("C2", "C3", "C4", "C5"):
+            v = a.get(point) if isinstance(a.get(point), dict) else {}
+            resultat = v.get("resultat", "na") if v.get("resultat") in ("ok", "ko", "na") else "na"
+            r[point] = (resultat, v.get("motif", ""))
+        if r["C3_valeurs"][0] == "ko":   # le contrôle des valeurs par le code l'emporte
+            r["C3"] = ("ko", " ; ".join(m for m in (r["C3_valeurs"][1], r["C3"][1]) if m))
+        del r["C3_valeurs"]
+
+        ligne_grille = " | ".join(f"{p} {SYMBOLE[r[p][0]]}" for p in POINTS)
+        motifs = [f"{p} : {r[p][1]}" for p in POINTS[:5] if r[p][0] == "ko"]
+        alertes = [r[p][1] for p in ("C6", "C7") if r[p][0] == "alerte"]
+
+        if motifs:
+            nb = (f["nb_rejets"] or 0) + 1
             bloque = nb > regles["max_allers_retours"]
-            mettre_a_jour(fiche["id"], AGENT, "Confirmation : non conforme", {
+            mettre_a_jour(f["id"], AGENT, "Contrôle grille C1-C7 : non conforme", {
                 "statut": "Bloqué" if bloque else "À corriger",
-                "acteur_suivant": "Data Governance Leader (humain)" if bloque else "AG-BIS-MANAGER",
+                "acteur_suivant": "Data Governance Leader (humain)" if bloque else
+                                  ("AG-BIS-MANAGER" if f["chemin"] == "B" else "AG-BIS-CROISEMENT-AB"),
                 "nb_rejets": nb,
-                "motif_rejet": a.get("motif", ""),
-            }, detail=a.get("motif", ""))
+                "motif_rejet": " ; ".join(motifs),
+            }, detail=ligne_grille + " — " + " ; ".join(motifs))
         else:
-            ecart = ""
-            if fiche["type"] == "Colonne technique" and (fiche["terme_lie"] or "").startswith("NOUVEAU"):
-                ecart = " Écart A→B : nouveau terme métier à arbitrer."
-            mettre_a_jour(fiche["id"], AGENT, "Confirmation : analyse conforme", {
+            mettre_a_jour(f["id"], AGENT, "Contrôle grille C1-C7 : conforme", {
                 "acteur_suivant": "Data Governance Leader (humain)",
-                "commentaire_ia": (fiche["commentaire_ia"] or "") + " | Analyse Leader IA : conforme. " + a.get("analyse", "") + ecart,
-            }, detail=a.get("analyse", ""))
-    print(f"{AGENT} : analyses terminées, confirmation finale au Data Governance Leader humain.")
+                "commentaire_ia": (par_id[f["id"]]["commentaire_ia"] or "") + " | Contrôle Leader : " + ligne_grille
+                                  + ("" if not alertes else " — " + " ".join(alertes)),
+            }, detail=ligne_grille + ("" if not alertes else " — " + " ".join(alertes)))
+
+    nb_ok = sum(1 for f in lire_fiches(domaine=domaine, statut="En confirmation") if f["acteur_suivant"] == "Data Governance Leader (humain)")
+    print(f"{AGENT} : contrôle terminé, {nb_ok} fiche(s) critique(s) en attente de confirmation par le Data Governance Leader humain.")

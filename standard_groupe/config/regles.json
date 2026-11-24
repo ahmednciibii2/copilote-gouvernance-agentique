@@ -1,5 +1,5 @@
 {
-  "version": "2.0",
+  "version": "2.1",
   "standard": "groupe",
   "organisation": "Data Owner + Data Steward + Data Governance Leader",
   "proprietaire": "Data Governance Leader",
@@ -7,20 +7,53 @@
     "redacteur": "Data Steward",
     "controleur": "Data Governance Leader (toutes les fiches)",
     "decideur": "Data Owner",
-    "arbitre_blocage": "Data Governance Leader"
+    "arbitre_blocage": "Data Governance Leader",
+    "classification": "Agent DPO (proposition), contrôlée en C3 par le Leader, validée par le Data Owner"
   },
   "max_allers_retours": 2,
-  "statuts": ["Identifié", "En rédaction", "À valider", "À corriger", "Certifié", "Bloqué"],
+  "statuts": [
+    "Identifié",
+    "En rédaction",
+    "À valider",
+    "À corriger",
+    "Certifié",
+    "Bloqué"
+  ],
   "champs_obligatoires": {
-    "Business Object": ["definition", "classification"],
-    "Business Term": ["definition", "classification", "colonnes_liees"],
-    "KPI": ["definition", "formule", "classification"],
-    "Colonne technique": ["terme_lie", "classification"]
+    "Business Object": [
+      "definition",
+      "classification"
+    ],
+    "Business Term": [
+      "definition",
+      "classification",
+      "colonnes_liees"
+    ],
+    "KPI": [
+      "definition",
+      "formule",
+      "classification"
+    ],
+    "Colonne technique": [
+      "terme_lie",
+      "classification"
+    ]
   },
   "classification": {
-    "confidentialite": ["Public", "Interne", "Confidentiel", "Restreint"],
-    "donnee_personnelle": ["Non", "Oui"],
-    "reglementee": ["Non", "Oui"]
+    "confidentialite": [
+      "Public",
+      "Interne",
+      "Confidentiel",
+      "Restreint"
+    ],
+    "donnee_personnelle": [
+      "Non",
+      "Oui"
+    ],
+    "reglementee": [
+      "Non",
+      "Oui"
+    ]
   },
   "definition_reglementee": "Donnée soumise à une norme ou à une politique de conformité (réglementation sectorielle, politique interne).",
   "regle_criticite": "Un élément est critique s'il contient une donnée réglementée, une donnée personnelle, ou s'il est classé Restreint.",
@@ -34,5 +67,14 @@
     "C6": "Terme sans colonne dans le SI : écart B vers A signalé, pas de refus",
     "C7": "Criticité calculée par la règle : information, pas de refus"
   },
-  "regle_definition": "Définition en langage métier, 1 à 3 phrases, sans jargon technique, compréhensible par une personne hors du domaine."
+  "regle_definition": "Définition en langage métier, 1 à 3 phrases, sans jargon technique, compréhensible par une personne hors du domaine.",
+  "agents": {
+    "AG-GRP-STEWARD": "rédige la définition et la formule (glossaire)",
+    "AG-GRP-CROISEMENT-BA": "croisement B→A : terme → colonnes ; écart B→A si aucune colonne",
+    "AG-GRP-CROISEMENT-AB": "croisement A→B : colonne → terme ; terme NOUVEAU proposé si aucun",
+    "AG-GRP-DPO": "classification de toutes les métadonnées, avec héritage métier → technique",
+    "AG-GRP-LEADER": "contrôle de toutes les fiches avec la grille C1 à C7",
+    "AG-GRP-OWNER": "dossier de décision pour le Data Owner"
+  },
+  "regle_heritage": "Le terme métier porte la classification. Une colonne liée à un terme (terme_lie ou colonnes_liees) en hérite. Si la colonne paraît plus sensible que son terme, le niveau le plus strict est conservé et un écart d'héritage est signalé au décideur. Une colonne sans terme est classifiée directement."
 }

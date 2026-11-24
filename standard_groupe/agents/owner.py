@@ -33,6 +33,8 @@ def points_attention_code(fiche):
         points.append("Écart B→A : aucune colonne correspondante dans le SI.")
     if fiche["type"] == "Colonne technique" and (fiche["terme_lie"] or "").startswith("NOUVEAU"):
         points.append("Écart A→B : nouveau terme métier à arbitrer.")
+    if "écart d'héritage" in (fiche.get("heritage") or ""):
+        points.append("Écart d'héritage : la colonne paraît plus sensible que son terme, niveau le plus strict conservé.")
     if fiche["nb_rejets"]:
         points.append(f"Déjà refusée {fiche['nb_rejets']} fois par le contrôle (dernier motif : {fiche['motif_rejet'] or 'non précisé'}).")
     return points
