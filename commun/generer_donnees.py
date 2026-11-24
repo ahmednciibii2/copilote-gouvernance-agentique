@@ -1,10 +1,19 @@
-import os
+"""Génère les données FICTIVES d'un standard dans son dossier donnees/ (plomberie commune).
+
+- glossaire_metier.xlsx       : chemin B (Domaine > Business Object > Business Terms et KPI)
+- metadonnees_techniques.xlsx : chemin A (système > table > colonne, avec exemples de valeurs)
+Les registres (qui est responsable de quel domaine) ne sont PAS générés ici : ils vivent dans config/.
+
+Usage : appelé par le lanceur du standard, ou à la main depuis la racine du projet :
+    python -m commun.generer_donnees groupe
+"""
+import sys
+
 import pandas as pd
 
-os.makedirs("donnees", exist_ok=True)
+from commun.outils import chemin, utiliser_standard
 
-# ===== CHEMIN B : glossaire métier (initié par le Data Owner ou le Data Manager) =====
-# Ontologie : Domaine > Business Object > Business Terms (attributs) et KPIs
+# ===== CHEMIN B : glossaire métier (même périmètre fictif pour les deux organisations) =====
 glossaire = [
     ("Supply Chain", "Lot de production", "Business Object", "Lot de production"),
     ("Supply Chain", "Lot de production", "Business Term", "Numéro de lot"),
@@ -34,14 +43,8 @@ glossaire = [
     ("Finance", "Facture fournisseur", "Business Term", "Date d'échéance"),
     ("Finance", "Facture fournisseur", "KPI", "Délai moyen de paiement fournisseurs"),
 ]
-df_glossaire = pd.DataFrame(glossaire, columns=["domaine", "business_object", "type", "nom"])
-df_glossaire.insert(0, "id", [f"GLO-{i:02d}" for i in range(1, len(df_glossaire) + 1)])
-df_glossaire["definition"] = ""
-df_glossaire["chemin"] = "B"
-df_glossaire["statut"] = "Identifié"
-df_glossaire.to_excel("donnees/glossaire_metier.xlsx", index=False)
 
-# ===== CHEMIN A : métadonnées techniques (référencées par l'IT) =====
+# ===== CHEMIN A : métadonnées techniques fictives =====
 technique = [
     ("Supply Chain", "ERP", "LOTS", "NUM_LOT", "texte", "L2026-0457 ; L2026-0458"),
     ("Supply Chain", "ERP", "LOTS", "DT_FABRIC", "date", "2026-09-12"),
@@ -62,26 +65,30 @@ technique = [
     ("Finance", "ERP", "FACTURES", "DT_ECHEANCE", "date", "2026-11-30"),
     ("Finance", "ERP", "GL_ECRITURES", "CPT_GL_NUM", "texte", "401000 ; 512100"),
 ]
-df_technique = pd.DataFrame(technique, columns=["domaine", "systeme", "table", "colonne", "type_donnee", "exemples"])
-df_technique.insert(0, "id", [f"TEC-{i:02d}" for i in range(1, len(df_technique) + 1)])
-df_technique["terme_lie"] = ""
-df_technique["chemin"] = "A"
-df_technique["statut"] = "Identifié"
-df_technique.to_excel("donnees/metadonnees_techniques.xlsx", index=False)
 
-# ===== Registres des domaines : un par standard (acteurs fictifs) =====
-registre_groupe = pd.DataFrame([
-    {"domaine": "Finance", "standard": "groupe", "data_owner": "DO-FIN", "data_steward": "DS-FIN", "data_manager": ""},
-    {"domaine": "Supply Chain", "standard": "groupe", "data_owner": "DO-SC", "data_steward": "DS-SC", "data_manager": ""},
-])
-registre_groupe.to_excel("donnees/registre_standard_groupe.xlsx", index=False)
 
-registre_bis = pd.DataFrame([
-    {"domaine": "Finance", "standard": "bis", "data_owner": "", "data_steward": "", "data_manager": "DM-FIN"},
-    {"domaine": "Supply Chain", "standard": "bis", "data_owner": "", "data_steward": "", "data_manager": "DM-SC"},
-])
-registre_bis.to_excel("donnees/registre_standard_bis.xlsx", index=False)
+def generer():
+    """Écrit les deux fichiers Excel dans le dossier donnees/ du standard actif. Renvoie (nb termes, nb colonnes)."""
+    dossier = chemin("donnees")
+    dossier.mkdir(parents=True, exist_ok=True)
 
-print("Glossaire métier (chemin B) :", len(df_glossaire), "éléments")
-print("Métadonnées techniques (chemin A) :", len(df_technique), "colonnes")
-print("Registres créés : standard groupe et standard bis")
+    df_glossaire = pd.DataFrame(glossaire, columns=["domaine", "business_object", "type", "nom"])
+    df_glossaire.insert(0, "id", [f"GLO-{i:02d}" for i in range(1, len(df_glossaire) + 1)])
+    df_glossaire["definition"] = ""
+    df_glossaire["chemin"] = "B"
+    df_glossaire["statut"] = "Identifié"
+    df_glossaire.to_excel(dossier / "glossaire_metier.xlsx", index=False)
+
+    df_technique = pd.DataFrame(technique, columns=["domaine", "systeme", "table", "colonne", "type_donnee", "exemples"])
+    df_technique.insert(0, "id", [f"TEC-{i:02d}" for i in range(1, len(df_technique) + 1)])
+    df_technique["terme_lie"] = ""
+    df_technique["chemin"] = "A"
+    df_technique["statut"] = "Identifié"
+    df_technique.to_excel(dossier / "metadonnees_techniques.xlsx", index=False)
+    return len(df_glossaire), len(df_technique)
+
+
+if __name__ == "__main__":
+    utiliser_standard(sys.argv[1] if len(sys.argv) > 1 else "groupe")
+    nb_termes, nb_colonnes = generer()
+    print(f"Données générées dans {chemin('donnees')} : {nb_termes} éléments de glossaire, {nb_colonnes} colonnes techniques.")
