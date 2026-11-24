@@ -11,15 +11,15 @@ Circuit : Manager (rédaction) → Croisement B→A → Croisement A→B → Age
 from commun.lanceur import executer
 from standard_bis.agents import croisement_a_vers_b, croisement_b_vers_a, dpo, leader_bis, manager
 
+# Ordre du circuit du standard bis (réutilisé par test_standard.py)
+ETAPES_PAR_BO = [manager.documenter_business_object]
+ETAPES_PAR_DOMAINE = [
+    croisement_b_vers_a.relier_termes,
+    croisement_a_vers_b.rattacher_colonnes,
+    dpo.classifier,
+    leader_bis.confirmer,
+    manager.preparer_decision,
+]
+
 if __name__ == "__main__":
-    executer(
-        "bis",
-        etapes_par_bo=[manager.documenter_business_object],
-        etapes_par_domaine=[
-            croisement_b_vers_a.relier_termes,
-            croisement_a_vers_b.rattacher_colonnes,
-            dpo.classifier,
-            leader_bis.confirmer,
-            manager.preparer_decision,
-        ],
-    )
+    executer("bis", ETAPES_PAR_BO, ETAPES_PAR_DOMAINE)

@@ -80,8 +80,13 @@ def executer(standard, etapes_par_bo, etapes_par_domaine):
     print(f"=== Lanceur du standard {standard} ===")
     preparer(options.reprise)
     cibles = perimetre(options.domaine, options.bo)
-    max_tours = o.charger_regles()["max_allers_retours"] + 1
+    faire_tourner(cibles, etapes_par_bo, etapes_par_domaine)
+    ecrire_bilan([d for d, _ in cibles])
 
+
+def faire_tourner(cibles, etapes_par_bo, etapes_par_domaine):
+    """Tours successifs du circuit sur les cibles [(domaine, [business objects])], tant qu'il reste des « À corriger »."""
+    max_tours = o.charger_regles()["max_allers_retours"] + 1
     for tour in range(1, max_tours + 1):
         print(f"\n--- Tour {tour} ---")
         for domaine, bos in cibles:
@@ -95,5 +100,3 @@ def executer(standard, etapes_par_bo, etapes_par_domaine):
             print(f"\nAucune fiche « À corriger » après le tour {tour} : circuit terminé.")
             break
         print(f"\n{len(a_corriger)} fiche(s) « À corriger » : nouveau tour.")
-
-    ecrire_bilan([d for d, _ in cibles])

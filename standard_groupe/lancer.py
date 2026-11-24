@@ -10,15 +10,15 @@ Circuit : Steward (rédaction) → Croisement B→A → Croisement A→B → Age
 from commun.lanceur import executer
 from standard_groupe.agents import croisement_a_vers_b, croisement_b_vers_a, dpo, leader, owner, steward
 
+# Ordre du circuit du standard groupe (réutilisé par test_standard.py)
+ETAPES_PAR_BO = [steward.documenter_business_object]
+ETAPES_PAR_DOMAINE = [
+    croisement_b_vers_a.relier_termes,
+    croisement_a_vers_b.rattacher_colonnes,
+    dpo.classifier,
+    leader.controler,
+    owner.preparer_decision,
+]
+
 if __name__ == "__main__":
-    executer(
-        "groupe",
-        etapes_par_bo=[steward.documenter_business_object],
-        etapes_par_domaine=[
-            croisement_b_vers_a.relier_termes,
-            croisement_a_vers_b.rattacher_colonnes,
-            dpo.classifier,
-            leader.controler,
-            owner.preparer_decision,
-        ],
-    )
+    executer("groupe", ETAPES_PAR_BO, ETAPES_PAR_DOMAINE)

@@ -7,32 +7,16 @@ Usage, depuis la racine du projet :
 Il crée une base temporaire (la vraie base du standard n'est pas touchée), fait passer le Business Object
 « Lot de production » dans tout le circuit, puis vérifie les points clés avec ✅ ou ❌.
 """
-import re
 import sqlite3
 import sys
 import tempfile
 from pathlib import Path
 
 import commun.outils as o
+from commun.faux_gemini import faux_gemini
 
 STD = sys.argv[1] if len(sys.argv) > 1 else "groupe"
 o.utiliser_standard(STD)
-
-
-def faux_gemini(consigne, essais=3):
-    """Répond comme Gemini, de façon prévisible, à n'importe quelle consigne des agents."""
-    reponses = []
-    for i in sorted(set(re.findall(r'"id": "([A-Z]{3}-\d+)"', consigne))):
-        r = {"id": i, "definition": f"Définition de test pour {i}.", "formule": "lots refusés / lots fabriqués (mois)", "justification": "test",
-             "colonnes_liees": ["TEC-01"] if i == "GLO-02" else [],
-             "terme_lie": "GLO-02" if i == "TEC-01" else "NOUVEAU", "nouveau_terme": f"Terme {i}", "business_object": "Lot de production",
-             "confidentialite": "Restreint" if i == "TEC-01" else "Interne", "donnee_personnelle": "Non",
-             "reglementee": "Oui" if i in ("GLO-02", "TEC-01") else "Non",
-             "synthese": "Synthèse de test.", "recommandation": "Valider", "motif": "", "points_attention": ""}
-        for p in ("C2", "C3", "C4", "C5"):
-            r[p] = {"resultat": "ko" if (i == "GLO-03" and p == "C4") else "ok", "motif": "colonne d'un autre objet" if i == "GLO-03" else ""}
-        reponses.append(r)
-    return reponses
 
 
 if STD == "groupe":
