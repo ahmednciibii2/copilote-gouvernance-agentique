@@ -20,11 +20,11 @@ o.utiliser_standard(STD)
 
 
 if STD == "groupe":
-    from standard_groupe.agents import croisement_a_vers_b as ab, croisement_b_vers_a as ba, dpo, leader, owner, steward as redacteur
-    agents = [redacteur, ba, ab, dpo, leader, owner]
+    from standard_groupe.agents import croisement_a_vers_b as ab, croisement_b_vers_a as ba, custodian, dpo, leader, owner, steward as redacteur
+    agents = [redacteur, ba, ab, custodian, dpo, leader, owner]
 else:
-    from standard_bis.agents import croisement_a_vers_b as ab, croisement_b_vers_a as ba, dpo, leader_bis as leader, manager as redacteur
-    agents = [redacteur, ba, ab, dpo, leader]
+    from standard_bis.agents import croisement_a_vers_b as ab, croisement_b_vers_a as ba, custodian, dpo, leader_bis as leader, manager as redacteur
+    agents = [redacteur, ba, ab, custodian, dpo, leader]
 for a in agents:
     a.demander_gemini = faux_gemini
 
@@ -38,6 +38,7 @@ print(f"Base temporaire : {o.BASE} ({initialiser(dossier)} fiches chargées depu
 
 D, BO = "Supply Chain", "Lot de production"
 redacteur.documenter_business_object(D, BO)
+custodian.documenter_colonnes(D)
 ba.relier_termes(D)
 ab.rattacher_colonnes(D)
 dpo.classifier(D)
@@ -47,12 +48,16 @@ if STD == "groupe":
 else:
     leader.confirmer(D)
     redacteur.preparer_decision(D)
+custodian.preparer_decision(D)
 
 con = sqlite3.connect(o.BASE)
 con.row_factory = sqlite3.Row
 f = {r["id"]: dict(r) for r in con.execute("SELECT * FROM fiches")}
 humain = "Data Owner : DO-SC (humain)" if STD == "groupe" else "Data Manager : DM-SC (humain)"
+custodian_humain = "Data Custodian : DC-SC (humain)"
 controles = [
+    ("Custodian : documentation technique + lignage + règle qualité (TEC-03)",
+     bool(f["TEC-03"]["description_technique"] and f["TEC-03"]["regle_qualite"] and f["TEC-03"]["lignage"] == "ERP › LOTS › DT_PEREMPTION")),
     ("B→A : lien trouvé (GLO-02 → TEC-01)", f["GLO-02"]["colonnes_liees"] == "TEC-01"),
     ("B→A : écart signalé (KPI GLO-06 sans colonne)", "écart B→A" in f["GLO-06"]["commentaire_ia"]),
     ("A→B : lien trouvé (TEC-01 → GLO-02)", f["TEC-01"]["terme_lie"] == "GLO-02"),
@@ -66,7 +71,9 @@ if STD == "groupe":
         ("Leader : grille C1-C7 écrite", "Contrôle Leader : C1" in f["GLO-02"]["commentaire_ia"]),
         ("Leader : refus C4 → À corriger, retour au Steward (GLO-03)", f["GLO-03"]["statut"] == "À corriger" and f["GLO-03"]["acteur_suivant"] == "AG-GRP-STEWARD"),
         ("Owner : dossier en 5 rubriques", "Contrôle C1-C7 :" in f["GLO-02"]["commentaire_ia"]),
-        ("Décision : attend le Data Owner humain", f["GLO-02"]["acteur_suivant"] == humain),
+        ("Décision : le terme attend le Data Owner humain", f["GLO-02"]["acteur_suivant"] == humain),
+        ("Custodian : dossier de la colonne, attend le Data Custodian humain (TEC-03)",
+         "Dossier de décision" in f["TEC-03"]["commentaire_ia"] and f["TEC-03"]["acteur_suivant"] == custodian_humain),
     ]
 else:
     controles += [
@@ -75,6 +82,8 @@ else:
         ("Leader bis : attend la confirmation du Leader humain", f["GLO-02"]["acteur_suivant"] == "Data Governance Leader (humain)"),
         ("Fiche non critique : pas de contrôle Leader (GLO-03)", "Contrôle Leader" not in f["GLO-03"]["commentaire_ia"]),
         ("Manager : dossier du Data Manager (GLO-03)", "Dossier de décision" in f["GLO-03"]["commentaire_ia"] and f["GLO-03"]["acteur_suivant"] == humain),
+        ("Custodian : colonne non critique → dossier, attend le Data Custodian humain (TEC-03)",
+         "Dossier de décision" in f["TEC-03"]["commentaire_ia"] and f["TEC-03"]["acteur_suivant"] == custodian_humain),
     ]
 print()
 for libelle, ok in controles:

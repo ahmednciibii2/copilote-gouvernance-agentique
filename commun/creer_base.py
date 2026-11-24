@@ -29,6 +29,7 @@ def initialiser(dossier_donnees=None):
         definition TEXT, formule TEXT,
         confidentialite TEXT, donnee_personnelle TEXT, reglementee TEXT, critique TEXT,
         heritage TEXT,
+        description_technique TEXT, lignage TEXT, regle_qualite TEXT,
         terme_lie TEXT, colonnes_liees TEXT,
         statut TEXT, acteur_suivant TEXT, nb_rejets INTEGER DEFAULT 0,
         motif_rejet TEXT, commentaire_ia TEXT, maj_le TEXT

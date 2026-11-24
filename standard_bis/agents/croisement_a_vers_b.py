@@ -1,6 +1,7 @@
 """AG-BIS-CROISEMENT-AB — croisement A→B du standard bis (tâche M4 du Data Manager).
 
-Part d'une colonne technique (chemin A) et cherche le terme du glossaire qu'elle représente.
+Part d'une colonne technique (chemin A), déjà documentée par l'agent Custodian (AG-BIS-CUSTODIAN),
+et cherche le terme du glossaire qu'elle représente.
 - Terme trouvé : le lien est écrit dans terme_lie.
 - Aucun terme : écart A→B, un terme « NOUVEAU : nom (Business Object) » est proposé avec sa définition.
 Relais ensuite à l'agent DPO pour la classification.
@@ -37,7 +38,7 @@ def rattacher_colonnes(domaine):
     """Rattache chaque colonne technique à un terme métier, ou propose un nouveau terme ; relais à l'agent DPO."""
     acteurs = infos_domaine(domaine)
     regles = charger_regles()
-    colonnes = [c for c in lire_fiches(domaine=domaine, chemin="A") if c["statut"] in ("Identifié", "À corriger")]
+    colonnes = [c for c in lire_fiches(domaine=domaine, chemin="A", statut="En rédaction") if c["acteur_suivant"] == AGENT]
     if not colonnes:
         print(f"{AGENT} : aucune colonne technique à rattacher pour {domaine}.")
         return
@@ -50,7 +51,7 @@ def rattacher_colonnes(domaine):
                 deja_lies.setdefault(i.strip(), []).append(t["id"])
 
     a_traiter = [{
-        "id": c["id"], "colonne": c["nom"], "exemples": c["exemples"],
+        "id": c["id"], "colonne": c["nom"], "exemples": c["exemples"], "description_technique": c["description_technique"],
         "deja_liee_depuis_le_glossaire": deja_lies.get(c["id"], []),
         "proposition_precedente": c["terme_lie"] or "",
         "motif_rejet": c["motif_rejet"] or "",

@@ -2,7 +2,8 @@
 
 Deux tâches, comme son humain :
 1. documenter_business_object : rédige la définition (et la formule d'un KPI) des fiches du glossaire ;
-2. preparer_decision : prépare le dossier de décision des fiches NON critiques pour le Data Manager.
+2. preparer_decision : prépare le dossier de décision des termes NON critiques pour le Data Manager
+   (les colonnes techniques ont leur propre dossier, préparé par l'agent Custodian).
 Ne fait ni les liens avec les colonnes (croisements), ni la classification (agent DPO).
 Circuit : Manager (rédaction) → Croisement B→A → Agent DPO → [critique : Leader bis → Data Governance Leader humain]
           → Manager (dossier, non critique) → Data Manager humain.

@@ -66,6 +66,10 @@ def controles_communs(c, domaine, bo):
                all(col["terme_lie"] and (col["terme_lie"] in toutes or col["terme_lie"].startswith("NOUVEAU")) for col in colonnes),
                [col["id"] for col in colonnes if not col["terme_lie"]])
 
+    c.verifier("Custodian : chaque colonne a sa description technique, son lignage et sa règle qualité",
+               all(col["description_technique"] and col["lignage"] and col["regle_qualite"] for col in colonnes),
+               [col["id"] for col in colonnes if not (col["description_technique"] and col["regle_qualite"])])
+
     print("\n— Agent DPO —")
     classees = [f for f in traitees if f["heritage"]]
     c.verifier("DPO : toutes les fiches traitées sont classifiées", len(classees) == len(traitees),

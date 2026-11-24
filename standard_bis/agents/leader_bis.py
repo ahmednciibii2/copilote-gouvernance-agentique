@@ -4,7 +4,7 @@ Contrôle chaque fiche critique « En confirmation » avec la grille C1 à C7 de
 - par le code : C1 (champs obligatoires), C3 (valeurs autorisées), C6 (écarts), C7 (criticité) ;
 - par Gemini : C2 (définition), C3 (cohérence), C4 (colonnes liées), C5 (formule).
 Puis : conforme → confirmation par le Data Governance Leader humain (DPO consulté) ;
-non conforme → retour au rédacteur (Manager pour un terme, croisement A→B pour une colonne) ;
+non conforme → retour au rédacteur (Manager pour un terme, Custodian pour une colonne) ;
 blocage au-delà de max_allers_retours.
 """
 import json
@@ -130,7 +130,7 @@ Chaque point est un objet {{"resultat": "ok" ou "ko" ou "na", "motif": "chaîne 
             mettre_a_jour(f["id"], AGENT, "Contrôle grille C1-C7 : non conforme", {
                 "statut": "Bloqué" if bloque else "À corriger",
                 "acteur_suivant": "Data Governance Leader (humain)" if bloque else
-                                  ("AG-BIS-MANAGER" if f["chemin"] == "B" else "AG-BIS-CROISEMENT-AB"),
+                                  ("AG-BIS-MANAGER" if f["chemin"] == "B" else "AG-BIS-CUSTODIAN"),
                 "nb_rejets": nb,
                 "motif_rejet": " ; ".join(motifs),
             }, detail=ligne_grille + " — " + " ; ".join(motifs))

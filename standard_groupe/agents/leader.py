@@ -3,7 +3,7 @@
 Contrôle chaque fiche « À valider » avec la grille C1 à C7 de la charte, point par point :
 - par le code : C1 (champs obligatoires), C3 (valeurs autorisées), C6 (écarts), C7 (criticité) ;
 - par Gemini : C2 (définition), C3 (cohérence), C4 (colonnes liées), C5 (formule).
-Puis : relais à l'agent Owner, retour au rédacteur (Steward pour un terme, croisement A→B pour une colonne),
+Puis : relais (terme → agent Owner, colonne → agent Custodian), retour au rédacteur (Steward pour un terme, Custodian pour une colonne),
 ou blocage au-delà de max_allers_retours.
 """
 import json
@@ -128,16 +128,16 @@ Chaque point est un objet {{"resultat": "ok" ou "ko" ou "na", "motif": "chaîne 
             mettre_a_jour(f["id"], AGENT, "Contrôle grille C1-C7 : non conforme", {
                 "statut": "Bloqué" if bloque else "À corriger",
                 "acteur_suivant": "Data Governance Leader (humain)" if bloque else
-                                  ("AG-GRP-STEWARD" if f["chemin"] == "B" else "AG-GRP-CROISEMENT-AB"),
+                                  ("AG-GRP-STEWARD" if f["chemin"] == "B" else "AG-GRP-CUSTODIAN"),
                 "nb_rejets": nb,
                 "motif_rejet": " ; ".join(motifs),
             }, detail=ligne_grille + " — " + " ; ".join(motifs))
         else:
             mettre_a_jour(f["id"], AGENT, "Contrôle grille C1-C7 : complet", {
-                "acteur_suivant": "AG-GRP-OWNER",
+                "acteur_suivant": "AG-GRP-OWNER" if f["chemin"] == "B" else "AG-GRP-CUSTODIAN",
                 "commentaire_ia": (par_id[f["id"]]["commentaire_ia"] or "") + " | Contrôle Leader : " + ligne_grille
                                   + ("" if not alertes else " — " + " ".join(alertes)),
             }, detail=ligne_grille + ("" if not alertes else " — " + " ".join(alertes)))
 
-    nb_ok = sum(1 for f in lire_fiches(domaine=domaine) if f["acteur_suivant"] == "AG-GRP-OWNER")
-    print(f"{AGENT} : contrôle terminé, {nb_ok} fiche(s) transmise(s) à AG-GRP-OWNER.")
+    nb_ok = sum(1 for f in lire_fiches(domaine=domaine) if f["acteur_suivant"] in ("AG-GRP-OWNER", "AG-GRP-CUSTODIAN") and f["statut"] == "À valider")
+    print(f"{AGENT} : contrôle terminé, {nb_ok} fiche(s) transmise(s) (termes → AG-GRP-OWNER, colonnes → AG-GRP-CUSTODIAN).")

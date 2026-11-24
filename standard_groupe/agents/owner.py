@@ -1,6 +1,7 @@
 """AG-GRP-OWNER — agent préparateur de décision du standard groupe (assiste le Data Owner).
 
-Pour chaque fiche jugée complète par l'agent Leader, prépare un dossier de décision en 5 rubriques :
+Pour chaque terme ou KPI jugé complet par l'agent Leader, prépare un dossier de décision en 5 rubriques
+(les colonnes techniques ont leur propre dossier, préparé par l'agent Custodian) :
 Synthèse · Recommandation · Motif · Points d'attention · Contrôle C1-C7.
 Il ne décide jamais : la fiche attend ensuite le Data Owner humain du domaine.
 """
