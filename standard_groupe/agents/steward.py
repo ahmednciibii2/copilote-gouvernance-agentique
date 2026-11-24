@@ -1,16 +1,19 @@
+"""AG-GRP-STEWARD — agent rédacteur du standard groupe (assiste le Data Steward).
+
+Rédige et classifie les fiches d'un Business Object, puis les transmet à l'agent Leader.
+"""
 import json
 
-from outils import charger_regles, demander_gemini, infos_domaine, lire_fiches, mettre_a_jour
+from commun.outils import charger_regles, demander_gemini, infos_domaine, lire_fiches, mettre_a_jour, utiliser_standard
 
+STANDARD = "groupe"
 AGENT = "AG-GRP-STEWARD"
+utiliser_standard(STANDARD)   # cet agent ne travaille que dans le standard groupe
 
 
 def documenter_business_object(domaine, business_object):
     """Rédige et classifie toutes les fiches d'un Business Object (standard groupe)."""
-    if infos_domaine(domaine)["standard"] != "groupe":
-        print(f"{AGENT} : le domaine {domaine} n'est pas en standard groupe, rien à faire.")
-        return
-
+    acteurs = infos_domaine(domaine)   # erreur claire si le domaine n'est pas dans le registre du groupe
     regles = charger_regles()
     fiches = [
         f for f in lire_fiches(domaine=domaine, business_object=business_object)
@@ -23,15 +26,15 @@ def documenter_business_object(domaine, business_object):
     elements = [{"id": f["id"], "type": f["type"], "nom": f["nom"], "motif_rejet": f["motif_rejet"] or ""} for f in fiches]
     colonnes = [{"id": c["id"], "nom": c["nom"], "exemples": c["exemples"]} for c in lire_fiches(domaine=domaine, chemin="A")]
 
-    consigne = f"""Tu es l'assistant du Data Steward du domaine {domaine} dans un laboratoire pharmaceutique.
+    consigne = f"""Tu es l'assistant du Data Steward ({acteurs["data_steward"]}) du domaine {domaine} dans une entreprise.
 Tu documentes le Business Object « {business_object} » du glossaire métier.
 
-Règles du standard de documentation :
+Règles de la charte du standard groupe :
 - Définition : {regles["regle_definition"]}
 - Confidentialité : une valeur parmi {regles["classification"]["confidentialite"]}
 - donnee_personnelle : "Oui" ou "Non"
-- gxp : "Oui" si l'élément sert à garantir la qualité, la traçabilité ou la sécurité du médicament, sinon "Non"
-- formule : pour un KPI, une formule de calcul simple ; sinon chaîne vide
+- reglementee : "Oui" si l'élément est une donnée réglementée ({regles["definition_reglementee"]}), sinon "Non"
+- formule : pour un KPI, une formule de calcul précise (attributs, dates, unités) ; sinon chaîne vide
 - colonnes_liees : liste des id de colonnes techniques ci-dessous qui représentent cet élément dans le SI ; liste vide si aucune
 - Si un motif_rejet est fourni, corrige ta proposition en conséquence.
 
@@ -39,7 +42,7 @@ Règles du standard de documentation :
 Colonnes techniques du domaine : {json.dumps(colonnes, ensure_ascii=False)}
 
 Réponds uniquement en JSON : une liste d'objets avec les clés
-id, definition, formule, confidentialite, donnee_personnelle, gxp, colonnes_liees, justification."""
+id, definition, formule, confidentialite, donnee_personnelle, reglementee, colonnes_liees, justification."""
 
     print(f"{AGENT} : envoi de {len(fiches)} fiches à Gemini pour « {business_object} »…")
     propositions = demander_gemini(consigne)
@@ -54,7 +57,7 @@ id, definition, formule, confidentialite, donnee_personnelle, gxp, colonnes_liee
                 "formule": p.get("formule", ""),
                 "confidentialite": p.get("confidentialite", ""),
                 "donnee_personnelle": p.get("donnee_personnelle", ""),
-                "gxp": p.get("gxp", ""),
+                "reglementee": p.get("reglementee", ""),
                 "colonnes_liees": ", ".join(p.get("colonnes_liees", [])),
                 "commentaire_ia": "Proposé par IA, à valider. " + p.get("justification", ""),
                 "statut": "À valider",
