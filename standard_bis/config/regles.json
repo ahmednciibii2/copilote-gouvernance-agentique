@@ -1,5 +1,5 @@
 {
-  "version": "2.1",
+  "version": "2.2",
   "standard": "bis",
   "organisation": "Data Manager + Data Governance Leader",
   "proprietaire": "Data Governance Leader",
@@ -57,7 +57,7 @@
       "Oui"
     ]
   },
-  "definition_reglementee": "Donnée soumise à une norme ou à une politique de conformité (réglementation sectorielle, politique interne).",
+  "definition_reglementee": "Donnée soumise à une obligation de conformité SPÉCIFIQUE, au-delà des obligations comptables, fiscales et commerciales générales : réglementation sectorielle, contrôle d'une autorité, exigence de traçabilité ou de sécurité produit, ou politique interne nommée.",
   "regle_criticite": "Un élément est critique s'il contient une donnée réglementée, une donnée personnelle, ou s'il est classé Restreint.",
   "usage_criticite": "Une fiche critique passe « En confirmation » : contrôle par l'agent Leader bis, puis confirmation du Data Governance Leader avant la décision du Data Manager. Une fiche non critique va directement au Data Manager.",
   "grille_controle": {
@@ -77,5 +77,20 @@
     "AG-BIS-DPO": "classification de toutes les métadonnées, avec héritage, puis tri par criticité",
     "AG-BIS-LEADER": "contrôle des fiches critiques avec la grille C1 à C7, avant confirmation du Data Governance Leader"
   },
-  "regle_heritage": "Le terme métier porte la classification. Une colonne liée à un terme (terme_lie ou colonnes_liees) en hérite. Si la colonne paraît plus sensible que son terme, le niveau le plus strict est conservé et un écart d'héritage est signalé au décideur. Une colonne sans terme est classifiée directement."
+  "regle_heritage": "Le terme métier porte la classification. Une colonne liée à un terme (terme_lie ou colonnes_liees) en hérite. Si la colonne paraît plus sensible que son terme, le niveau le plus strict est conservé et un écart d'héritage est signalé au décideur. Une colonne sans terme est classifiée directement.",
+  "exemples_reglementee": {
+    "oui": [
+      "coordonnées bancaires (lutte anti-fraude et anti-blanchiment)",
+      "statut de libération qualité d'un lot",
+      "résultat de contrôle qualité",
+      "date de péremption d'un produit"
+    ],
+    "non": [
+      "montant hors taxes d'une facture",
+      "date d'échéance",
+      "raison sociale d'un fournisseur",
+      "mode de transport",
+      "quantité planifiée"
+    ]
+  }
 }

@@ -82,6 +82,9 @@ Classifie chaque élément, métier (glossaire) comme technique (colonne), selon
   "Restreint" est réservé aux données très sensibles (coordonnées bancaires, données personnelles sensibles, secrets d'affaires).
 - donnee_personnelle : "Oui" si l'élément permet d'identifier directement ou indirectement une personne, sinon "Non".
 - reglementee : "Oui" si c'est une donnée réglementée ({regles["definition_reglementee"]}), sinon "Non".
+  Exemples "Oui" : {", ".join(regles["exemples_reglementee"]["oui"])}.
+  Exemples "Non" : {", ".join(regles["exemples_reglementee"]["non"])}.
+  Une donnée simplement comptable ou commerciale n'est PAS réglementée au sens de la charte.
 - Les trois axes sont indépendants. Pour une colonne, appuie-toi aussi sur ses exemples de valeurs.
 - Si un motif_rejet est fourni, corrige en conséquence.
 
