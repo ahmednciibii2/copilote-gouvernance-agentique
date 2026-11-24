@@ -1,0 +1,96 @@
+{
+  "version": "2.2",
+  "standard": "bis",
+  "organisation": "Data Manager + Data Governance Leader",
+  "proprietaire": "Data Governance Leader",
+  "circuit": {
+    "redacteur": "Data Manager",
+    "controleur": "Data Governance Leader (fiches critiques seulement)",
+    "confirmation_critique": "Data Governance Leader",
+    "decideur": "Data Manager",
+    "arbitre_blocage": "Data Governance Leader",
+    "classification": "Agent DPO (proposition) ; fiches critiques contrôlées en C3 par le Leader bis, DPO humain consulté"
+  },
+  "max_allers_retours": 2,
+  "statuts": [
+    "Identifié",
+    "En rédaction",
+    "À valider",
+    "En confirmation",
+    "À corriger",
+    "Certifié",
+    "Bloqué"
+  ],
+  "champs_obligatoires": {
+    "Business Object": [
+      "definition",
+      "classification"
+    ],
+    "Business Term": [
+      "definition",
+      "classification",
+      "colonnes_liees"
+    ],
+    "KPI": [
+      "definition",
+      "formule",
+      "classification"
+    ],
+    "Colonne technique": [
+      "terme_lie",
+      "classification"
+    ]
+  },
+  "classification": {
+    "confidentialite": [
+      "Public",
+      "Interne",
+      "Confidentiel",
+      "Restreint"
+    ],
+    "donnee_personnelle": [
+      "Non",
+      "Oui"
+    ],
+    "reglementee": [
+      "Non",
+      "Oui"
+    ]
+  },
+  "definition_reglementee": "Donnée soumise à une obligation de conformité SPÉCIFIQUE, au-delà des obligations comptables, fiscales et commerciales générales : réglementation sectorielle, contrôle d'une autorité, exigence de traçabilité ou de sécurité produit, ou politique interne nommée.",
+  "regle_criticite": "Un élément est critique s'il contient une donnée réglementée, une donnée personnelle, ou s'il est classé Restreint.",
+  "usage_criticite": "Une fiche critique passe « En confirmation » : contrôle par l'agent Leader bis, puis confirmation du Data Governance Leader avant la décision du Data Manager. Une fiche non critique va directement au Data Manager.",
+  "grille_controle": {
+    "C1": "Champs obligatoires remplis selon le type de fiche",
+    "C2": "Définition métier : 1 à 3 phrases, sans jargon, compréhensible hors du domaine",
+    "C3": "Classification cohérente et valeurs autorisées",
+    "C4": "Chaque colonne liée appartient bien à ce Business Object",
+    "C5": "Formule du KPI précise : attributs, dates, unités",
+    "C6": "Terme sans colonne dans le SI : écart B vers A signalé, pas de refus",
+    "C7": "Criticité calculée par la règle : déclenche la confirmation"
+  },
+  "regle_definition": "Définition en langage métier, 1 à 3 phrases, sans jargon technique, compréhensible par une personne hors du domaine.",
+  "agents": {
+    "AG-BIS-MANAGER": "rédige la définition et la formule (glossaire) et prépare le dossier de décision des fiches non critiques",
+    "AG-BIS-CROISEMENT-BA": "croisement B→A : terme → colonnes ; écart B→A si aucune colonne",
+    "AG-BIS-CROISEMENT-AB": "croisement A→B : colonne → terme ; terme NOUVEAU proposé si aucun",
+    "AG-BIS-DPO": "classification de toutes les métadonnées, avec héritage, puis tri par criticité",
+    "AG-BIS-LEADER": "contrôle des fiches critiques avec la grille C1 à C7, avant confirmation du Data Governance Leader"
+  },
+  "regle_heritage": "Le terme métier porte la classification. Une colonne liée à un terme (terme_lie ou colonnes_liees) en hérite. Si la colonne paraît plus sensible que son terme, le niveau le plus strict est conservé et un écart d'héritage est signalé au décideur. Une colonne sans terme est classifiée directement.",
+  "exemples_reglementee": {
+    "oui": [
+      "coordonnées bancaires (lutte anti-fraude et anti-blanchiment)",
+      "statut de libération qualité d'un lot",
+      "résultat de contrôle qualité",
+      "date de péremption d'un produit"
+    ],
+    "non": [
+      "montant hors taxes d'une facture",
+      "date d'échéance",
+      "raison sociale d'un fournisseur",
+      "mode de transport",
+      "quantité planifiée"
+    ]
+  }
+}

@@ -1,38 +1,73 @@
+"""Boîte à outils commune aux deux standards (plomberie technique, aucune règle métier).
+
+Avant toute chose, un agent ou un lanceur indique pour quel standard il travaille :
+    utiliser_standard("groupe")   ou   utiliser_standard("bis")
+Tous les chemins (charte, registre, base, données, rapports) en sont déduits.
+"""
 import json
 import os
 import sqlite3
+import sys
 import time
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 from dotenv import load_dotenv
 from google import genai
 from google.genai import errors
 
-load_dotenv()
-BASE = "catalogue.db"
-REGISTRE = None
+# Racine du projet = le dossier qui contient "commun"
+RACINE = Path(__file__).resolve().parent.parent
+load_dotenv(RACINE / ".env")
+
+STANDARDS = ("groupe", "bis")
+STANDARD = None   # standard actif : "groupe" ou "bis"
+DOSSIER = None    # ex. .../standard_groupe
+BASE = None       # ex. .../standard_groupe/catalogue.db
+REGLES = None     # ex. .../standard_groupe/config/regles.json
+REGISTRE = None   # ex. .../standard_groupe/config/registre.xlsx
 _client = None
 
 
-def utiliser(base, registre=None):
-    """Choisit la base et le registre du scénario simulé (utilisé par main.py)."""
-    global BASE, REGISTRE
-    BASE = base
-    REGISTRE = registre
+def utiliser_standard(standard):
+    """Choisit le standard actif et en déduit tous les chemins."""
+    global STANDARD, DOSSIER, BASE, REGLES, REGISTRE
+    if standard not in STANDARDS:
+        raise ValueError(f"Standard inconnu : {standard!r}. Valeurs possibles : groupe ou bis.")
+    STANDARD = standard
+    DOSSIER = RACINE / f"standard_{standard}"
+    BASE = DOSSIER / "catalogue.db"
+    REGLES = DOSSIER / "config" / "regles.json"
+    REGISTRE = DOSSIER / "config" / "registre.xlsx"
+
+
+def _verifier_standard():
+    if STANDARD is None:
+        raise RuntimeError('Aucun standard choisi : appelez d\'abord utiliser_standard("groupe") ou utiliser_standard("bis").')
+
+
+def chemin(*morceaux):
+    """Chemin dans le dossier du standard actif. Exemple : chemin("rapports", "bilan.txt")"""
+    _verifier_standard()
+    return DOSSIER.joinpath(*morceaux)
 
 
 def charger_regles():
-    """Lit le fichier de règles du Data Governance Leader."""
-    with open("config/regles.json", encoding="utf-8") as f:
+    """Lit la charte du standard actif."""
+    _verifier_standard()
+    with open(REGLES, encoding="utf-8") as f:
         return json.load(f)
 
 
 def infos_domaine(domaine):
-    """Renvoie le standard (groupe ou bis) et les acteurs d'un domaine."""
-    chemin = REGISTRE or charger_regles()["registre_domaines"]
-    registre = pd.read_excel(chemin, dtype=str).fillna("")
-    return registre[registre["domaine"] == domaine].iloc[0].to_dict()
+    """Renvoie les acteurs d'un domaine, lus dans le registre du standard actif."""
+    _verifier_standard()
+    registre = pd.read_excel(REGISTRE, dtype=str).fillna("")
+    lignes = registre[registre["domaine"] == domaine]
+    if lignes.empty:
+        raise ValueError(f"Le domaine {domaine!r} n'est pas dans le registre du standard {STANDARD}.")
+    return lignes.iloc[0].to_dict()
 
 
 def demander_gemini(consigne, essais=3):
@@ -75,7 +110,12 @@ def demander_gemini(consigne, essais=3):
     raise RuntimeError("Gemini est indisponible pour le moment : réessayez plus tard.")
 
 
-def connexion():
+def connexion(creer=False):
+    """Ouvre la base du standard actif.
+    creer=True seulement pour la créer (creer_base.py) ; sinon, une base absente est une erreur."""
+    _verifier_standard()
+    if not creer and not BASE.exists():
+        raise FileNotFoundError(f"La base {BASE} n'existe pas encore : lancez d'abord le lanceur du standard {STANDARD}.")
     con = sqlite3.connect(BASE)
     con.row_factory = sqlite3.Row
     return con
@@ -113,11 +153,18 @@ def mettre_a_jour(fiche_id, auteur, action, champs, detail=""):
     con.close()
 
 
-# Petit test quand on lance ce fichier directement
+# Petit test : python commun\outils.py groupe   (ajoutez --gemini pour tester aussi l'appel à Gemini)
 if __name__ == "__main__":
-    print("Règles version :", charger_regles()["version"])
-    print("Finance :", infos_domaine("Finance")["standard"])
-    print("Supply Chain :", infos_domaine("Supply Chain")["standard"])
-    print("Fiches au statut Identifié :", len(lire_fiches(statut="Identifié")))
-    test = demander_gemini('Réponds uniquement en JSON avec la forme {"etat": "ok", "phrase": "..."} où phrase est une phrase de 6 mots sur la gouvernance des données.')
-    print("Test Gemini (JSON) :", test)
+    standard = sys.argv[1] if len(sys.argv) > 1 else "groupe"
+    utiliser_standard(standard)
+    print(f"Standard actif : {STANDARD}")
+    for nom, p in [("Charte", REGLES), ("Registre", REGISTRE), ("Base", BASE)]:
+        print(f"  {'✅' if p.exists() else '❌'} {nom} : {p.relative_to(RACINE)}")
+    print("  Version de la charte :", charger_regles()["version"])
+    print("  Domaines du registre :", pd.read_excel(REGISTRE, dtype=str)["domaine"].tolist())
+    if BASE.exists():
+        print("  Fiches au statut Identifié :", len(lire_fiches(statut="Identifié")))
+    else:
+        print("  (base pas encore créée : normal à ce stade, elle le sera à l'étape M7)")
+    if "--gemini" in sys.argv:
+        print("  Test Gemini :", demander_gemini('Réponds uniquement en JSON avec la forme {"etat": "ok", "phrase": "..."} où phrase est une phrase de 6 mots sur la gouvernance des données.'))
